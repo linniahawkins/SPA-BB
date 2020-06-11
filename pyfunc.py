@@ -1,0 +1,154 @@
+#!/usr/bin/env python2.7
+
+import netCDF4 as nc
+import numpy as np
+import pandas as pd
+import os
+
+def farquhar( vcmax, vjmax, kc, ko, gamma1, resp, par, ci ):
+	"""Calculate leaf internal co2 concentration (ci) from stomatal conductance (gs)
+	assuming a leaf temperature of 25C
+
+    Parameters : vcmax   : stomatal conductance (mol H2O/m2 leaf/s)
+    			 vjmax   : ambient CO2 concentration (umol/mol)
+    			 kc      : Michaelis-Menten constants for CO2
+    			 ko      : and oxygen
+    			 par     : PAR
+    			 resp    : respiration
+    			 gamma1  : CO2 compensation points
+    			 ci      : internal co2 concentration (umol/mol)
+                 
+    Returns    : anx     : metabolic net photosynthetic rate (umolC/m2 ground area /s)"""
+
+	oi = 210 # o2 partial pressure umol/mol
+	alphaj = 0.385 # initial slope of quantum response curve
+	theta = 0.7 # curvature of quantum response curve
+
+	# determine Rubisco limited carboxylation rate
+	wc = ( vcmax*ci ) / (ci + kc * ( 1+oi / ko ))
+
+	# determine potential rate of RuBP regeneration
+	bee = alphaj * par + vjmax
+	vj = ( bee - np.sqrt( bee**2 - 4 * theta * alphaj * par * vjmax )) / ( 2*theta )
+
+	# determine RuBP regeneration limited carboxylation rate
+	wj = vj * ci / ( 4.5 * ci + 10.5*gamma1)
+
+	# determine limiting rate, carboxylation or regeneration
+	vc = min( wc, wj )
+
+	# net photosynthetic rate, carboxylation regeneration
+	farquhar = ( vc * ( 1 - gamma1 / ci ) - resp )
+
+	return farquhar
+
+
+def leaf_temperature( gs, netrad, temp, wdef, gbb):
+    """ determines leaf temperature from stomatal conductance
+
+    Parameters  :   gs   # stomatal conductance (m/s)
+       				netrad # 
+    				temp # air temperature in C
+    				wdef # 
+    				gbb # """
+
+    # set constants
+    cp_air = 1004
+    air_density_kg = 1.27
+    gbh = .03 
+    boltz_kW = 5.67*10**-11
+    emiss = 0.959
+
+    ta = temp + 273.15
+    rho =  air_density_kg * 10**3 # density of air g/m3
+    cp = cp_air*10**-6
+
+    # slope of saturation vapor pressure curve (t-dependent)
+    s = 6.1078 * 17.269 * 237.3 * np.exp( 17.269*temp / (237.3+temp))
+    slope = 0.1 * ( s / (237.3+temp )**2)
+    psych = 0.1 * ( 0.646 * np.exp( 0.00097*temp ))
+    lambd = 0.001 * (2501 - 2.364*temp)
+
+    # convert water deficit to vapor presure deficit
+    de = wdef * lambd*psych / (rho*cp)
+    gr = 4*emiss * boltz_kW * ta**3 / (rho * cp )
+    ghr = gr + 2 * gbh
+    rhr = 1 / ghr
+    rt = 1/gs + 1/gbb
+    denom = psych * rt + slope*rhr
+    diff = rhr*rt*psych*netrad / (rho*cp*denom) - rhr*de / denom
+
+    leaf_temperature = diff+temp
+
+    return leaf_temperature
+
+def evap( gs, lt, netrad, wdef, gbb ):
+    """determine evapotranspiration rate (g m-2 s-1) 
+    from q (kW m-2), lt (oC), wdef (g m-3) and gbb and gs (m s-1)    
+
+    Parameters  :    gbb  # canopy level boundary conductance for water vapour (m.s-1)
+                     gs   # incoming stomatal conductance (m.s-1)
+                     q    # canopy level net radiation (kW.m-2)
+                     lt   # incoming leaf temperature (oC)
+                     wdef # water deficit of air (kg.m-3)"""
+
+    # slope of saturation vapour pressure curve (t-dependent)
+    s      = 6.1078 * 17.269 * 237.3 * np.exp( 17.269 * lt / ( 237.3 + lt ) )
+    slope  = 0.1 * ( s / ( 237.3 + lt )**2 )      # (kPa K-1)
+    psych  = 0.0646 * np.exp( 0.00097 * lt )         # psych is temp-dependent (kPa K-1)
+    eps    = slope / psych                            # response of epsilon to temp
+    lambd = ( 2.5010 - 0.002364 * lt )           # latent heat of vapourisation (KJ g-1)
+    evap   = ( eps * netrad / lambd + wdef * gbb ) / ( 1 + eps + gbb / gs ) # (g m-2 s-1)
+
+    return evap
+
+def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
+	"""diffusion limited assimilation rate (umol.C.m-2 ground area s-1)
+	Parameters  :   gs   # incoming stomatal conductance (m.s-1)
+					ci   # 
+					et   #
+					gbb  # boundary conductance
+					lt   # leaf temperature
+					atmos_press # 
+					co2  # ambient CO2"""
+
+	gi = 1 # mesophyll conductance (m/s)
+	Rcon = 8.3144 # universal gas constant (J/mol/K)
+
+	convert = atmos_press / ( Rcon * (273.15 + lt))
+
+	# total leaf conductance (converts from m/s to mol/s)
+	gt = convert / (1.65/gs + 1.37/gbb + 1/gi)
+
+	diffusion = ( gt - 0.5*et ) * co2 - ( gt + 0.5*et ) * ci
+
+	return diffusion
+
+def quadratic(a,b,c):
+	
+	if (b < 0 ):
+		q = -0.5 * (b - np.sqrt(b*b - 4*a*c))
+	else:
+	    q = -0.5 * (b + np.sqrt(b*b - 4*a*c))
+
+	r1 = q/a
+
+	if (q == 0):
+		r2 = 1*10**36
+	else:
+		r2 = c/q
+
+	return [r1,r2]
+	
+
+
+
+
+
+
+
+
+
+
+
+
