@@ -71,7 +71,7 @@ def leaf_temperature( gs, netrad, temp, wdef, gbb):
 
     # convert water deficit to vapor presure deficit
     de = wdef * lambd*psych / (rho*cp)
-    gr = 4*emiss * boltz_kW * ta**3 / (rho * cp )
+    gr = 4*emiss * boltz_kW * (ta**3) / (rho * cp )
     ghr = gr + 2 * gbh
     rhr = 1 / ghr
     rt = 1/gs + 1/gbb
@@ -119,7 +119,7 @@ def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 
 	# total leaf conductance (converts from m/s to mol/s)
 	gt = convert / (1.65/gs + 1.37/gbb + 1/gi)
-
+	
 	diffusion = ( gt - 0.5*et ) * co2 - ( gt + 0.5*et ) * ci
 
 	return diffusion
@@ -134,9 +134,9 @@ def quadratic(a,b,c):
 	r1 = q/a
 
 	if (q == 0):
-		r2 = 1*10**36
+		r2 = 1*(10**36)
 	else:
-		r2 = c/q
+		r2 = c / q
 
 	return [r1,r2]
 	
