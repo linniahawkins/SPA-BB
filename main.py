@@ -41,8 +41,7 @@ def CiFunc(ci_val):
     anx = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci_val)
 
     # calculate co2 at leaf surface
-    cs = co2 - 5
-    print ci_val
+    cs = co2 - (anx / gbv)
    
     # Ball-Berry
     g0 = 0.01
@@ -57,12 +56,12 @@ def CiFunc(ci_val):
     # convert gs (mol/m2/s) to m/s
     convert = (Rcon * ( 273.15 + temp )) / atmos_press
     gs = gsx*convert
-    gs = 0.002 # m/s
+    #gs = 0.002 # m/s
 
     lt = leaf_temperature( gs, netrad, temp, wdef, gbb )
 
     et = evap( gs, lt, netrad, wdef, gbb )
-    et = 0.001
+    #et = 0.001
 
     adx = diffusion( gs, ci_val, et , gbb , lt, atmos_press, co2)
 
@@ -76,11 +75,8 @@ def CiFunc(ci_val):
 ci0 = 0.5*co2
 ci1 = 2*co2
 tol = 0.1
-ci = optimize.brent(CiFunc,brack=(0,1,500),tol=tol)
+ci = optimize.brent(CiFunc,brack=(ci0,ci1),tol=tol)
 
 ##### plot #####
 print ci
-
-
-
 

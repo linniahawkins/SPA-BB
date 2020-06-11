@@ -119,7 +119,7 @@ def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 
 	# total leaf conductance (converts from m/s to mol/s)
 	gt = convert / (1.65/gs + 1.37/gbb + 1/gi)
-	
+
 	diffusion = ( gt - 0.5*et ) * co2 - ( gt + 0.5*et ) * ci
 
 	return diffusion
