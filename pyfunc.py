@@ -15,7 +15,7 @@ def farquhar( vcmax, vjmax, kc, ko, gamma1, resp, par, ci ):
     			 ko      : and oxygen
     			 par     : PAR
     			 resp    : respiration
-    			 gamma1  : CO2 compensation points
+    			 gamma1  : CO2 compensation point
     			 ci      : internal co2 concentration (umol/mol)
                  
     Returns    : anx     : metabolic net photosynthetic rate (umolC/m2 ground area /s)"""
@@ -47,10 +47,11 @@ def leaf_temperature( gs, netrad, temp, wdef, gbb):
     """ determines leaf temperature from stomatal conductance
 
     Parameters  :   gs   # stomatal conductance (m/s)
-       				netrad # 
+       				netrad # canopy level net radiation (kW.m-2)
     				temp # air temperature in C
-    				wdef # 
-    				gbb # """
+    				wdef # water deficit of air (kg.m-3)
+    				gbb # canopy level boundary conductance for water vapour (m.s-1) 
+    Returns		:	leaf temperature (C) """
 
     # set constants
     cp_air = 1004
@@ -88,7 +89,7 @@ def evap( gs, lt, netrad, wdef, gbb ):
 
     Parameters  :    gbb  # canopy level boundary conductance for water vapour (m.s-1)
                      gs   # incoming stomatal conductance (m.s-1)
-                     q    # canopy level net radiation (kW.m-2)
+                     netrad    # canopy level net radiation (kW.m-2)
                      lt   # incoming leaf temperature (oC)
                      wdef # water deficit of air (kg.m-3)"""
 
@@ -105,19 +106,19 @@ def evap( gs, lt, netrad, wdef, gbb ):
 def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 	"""diffusion limited assimilation rate (umol.C.m-2 ground area s-1)
 	Parameters  :   gs   # incoming stomatal conductance (m.s-1)
-					ci   # 
-					et   #
-					gbb  # boundary conductance
-					lt   # leaf temperature
-					atmos_press # 
-					co2  # ambient CO2"""
+					ci   # internal CO2 concentration (umol/mol)
+					et   # evapotranspiration 
+					gbb  # boundary layer conductance (m/s)
+					lt   # leaf temperature (C)
+					atmos_press # atmospheric pressure(Pa)
+					co2  # ambient CO2 (umol/mol)
+	Returns		:	adx diffusion based photosynthetic rate (umolC/m2 ground area /s) """
 
 	gi = 1 # mesophyll conductance (m/s)
 	Rcon = 8.3144 # universal gas constant (J/mol/K)
 
-	convert = atmos_press / ( Rcon * (273.15 + lt))
-
 	# total leaf conductance (converts from m/s to mol/s)
+	convert = atmos_press / ( Rcon * (273.15 + lt))
 	gt = convert / (1.65/gs + 1.37/gbb + 1/gi)
 
 	diffusion = ( gt - 0.5*et ) * co2 - ( gt + 0.5*et ) * ci

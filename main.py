@@ -10,9 +10,8 @@ from pyfunc import *
 # Set atmospheric variables 
 rh = 65 # %
 temp = 25 #C
-par = 790
+par = 700
 atmos_press =  98400 # Pa
-lt = temp +1
 netrad =  .02 # net radiation penetration to canopy layer (kW.m-2)
 co2 = 385 # umol/mol
 
@@ -20,6 +19,7 @@ co2 = 385 # umol/mol
 Rcon = 8.3144    # constant
 gbb = 0.002     # boundary layer conductance m/s
 gbv = gbb * (10**6) / 18 # boundary layer conductance H2O (mol H2O/m2 leaf/s)
+#gbv =  1 mol/m2/s 
 rn = 0.105 # respiration constant umol CO2/g N at 10 deg C
 nit = 2.5 # canopy layer specific nitrogen content (gN/m2 leaf area)
 
@@ -31,8 +31,9 @@ kc = 40
 ko = 45
 gamma1 = 16
 
-wdef = 10
 lt = temp
+
+wdef = 10
 resp = rn * nit * np.exp( np.log(2) * ( lt - 10 ) / 10 )
 
 def CiFunc(ci_val):
@@ -56,12 +57,10 @@ def CiFunc(ci_val):
     # convert gs (mol/m2/s) to m/s
     convert = (Rcon * ( 273.15 + temp )) / atmos_press
     gs = gsx*convert
-    #gs = 0.002 # m/s
 
     lt = leaf_temperature( gs, netrad, temp, wdef, gbb )
 
     et = evap( gs, lt, netrad, wdef, gbb )
-    #et = 0.001
 
     adx = diffusion( gs, ci_val, et , gbb , lt, atmos_press, co2)
 
@@ -69,14 +68,25 @@ def CiFunc(ci_val):
 
     return diff
 
-
 ##### Main code #####
 
-ci0 = 0.5*co2
-ci1 = 2*co2
+ci0 = 0.1*co2
+ci1 = .9*co2
 tol = 0.1
-ci = optimize.brent(CiFunc,brack=(ci0,ci1),tol=tol)
+
+ci_out = []
+an = []
+for vcmax in np.arange(15,40,5):
+	vjmax = vcmax*2
+	ci = optimize.brentq(CiFunc,ci0,ci1)
+	ci_out.append(ci)
+	anx = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci)
+	an.append(anx)
 
 ##### plot #####
-print ci
+
+print ci_out
+print an
+
+
 
