@@ -83,6 +83,7 @@ def leaf_temperature( gs, netrad, temp, wdef, gbb):
 
     return leaf_temperature
 
+
 def evap( gs, lt, netrad, wdef, gbb ):
     """determine evapotranspiration rate (g m-2 s-1) 
     from q (kW m-2), lt (oC), wdef (g m-3) and gbb and gs (m s-1)    
@@ -102,6 +103,7 @@ def evap( gs, lt, netrad, wdef, gbb ):
     evap   = ( eps * netrad / lambd + wdef * gbb ) / ( 1 + eps + gbb / gs ) # (g m-2 s-1)
 
     return evap
+
 
 def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 	"""diffusion limited assimilation rate (umol.C.m-2 ground area s-1)
@@ -125,6 +127,7 @@ def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 
 	return diffusion
 
+
 def quadratic(a,b,c):
 	
 	if (b < 0 ):
@@ -140,7 +143,38 @@ def quadratic(a,b,c):
 		r2 = c / q
 
 	return [r1,r2]
+
+
+def arrhenious( a, b, lt):
+	""" Temperature adjustment for Michaelis-Menten coeefficients for CO2 (kc)
+	and 02 (k0) and co2 compensation point
+			a  	: saturation
+			b 	: 	half saturation concentration
+			t 	: 	leaf temperature """
+
+	arrhenious = a * np.exp( b * (lt - 25) / (lt + 273.15))
+
+	return arrhenious
+
+
+def tempmet( max_temp , opt , q , lt):
+	"""Apply non-gaussian temperature modifications on carboxylation and 
+	electron-transport rates
+		max_temp 	:	max temperature
+		opt 	 	: 	metabolic optimum temperature
+		q 			: 	kurtosis
+		lt 			: 	leaf temperature (C)"""
+
+	if ( lt > max_temp ): 
+		tempmet = 0
+	else:
+		dummy = (max_temp - lt ) / (max_temp - opt )
+		dummy = np.exp( np.log( dummy ) * q * ( max_temp - opt ))
+		tempmet = dummy * np.exp(q * (lt-opt))
+
+	return tempmet
 	
+
 
 
 
