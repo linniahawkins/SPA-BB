@@ -18,50 +18,6 @@ def readin_met(in_dir,start,end):
 
 	return met_data
 
-
-in_dir='/Users/linniahawkins/Documents/SPA/inputs/'  
-start=datetime(2012,7,1) 
-end=datetime(2012,7,31)
-
-met_data = readin_met(in_dir,start,end) 
-varb = ['TA_F','SW_IN_F','VPD_F','P_F','SWC_F_MDS_1']
-
-met_temp = met_data['airt'] #C
-met_par = met_data['PAR']
-atmos_press =  98400 # Pa
-met_netrad =  met_data['sw_rad']*.1 # net radiation penetration to canopy layer (kW.m-2)
-met_co2 = met_data['co2'] # umol/mol
-met_vpd = met_data['vpd'] # kPa
-met_wind_spd = met_data['wind_spd'] # m/s
-
-
-# set veg parameters
-la = 3.2
-nit = 2.1 # canopy layer specific nitrogen content (gN/m2 leaf area)
-kappac = 16.86
-kappaj = 45.37
-vcm = kappac * nit # calculate Vcmax/Jmax given current nitrogen (umolC.m-2.s-1)
-vjm = kappaj * nit 
-dimen = 0.002 # (m)
-tower_ht = 33 # (m)
-
-
-# set miscelanious values
-Rcon = 8.3144    # universal gas constant (J/K/mol)
-rn = 0.105 # respiration constant umol CO2/g N at 10 deg C
-Vc_kurtosis = 0.143 # kurtosis of Vcmax temp response
-Vj_kurtosis = 0.172 # Kurtosis of Jmax temp response
-kc_saturation = 310
-kc_half_sat_conc = 23.956
-ko_saturation = 155
-ko_half_sat_conc = 14.509
-co2comp_saturation = 36.5
-co2comp_half_sat_conc = 9.46
-vcmax_max_temp = 65.03 # max tolerated temperature for carboxylation
-jmax_max_temp = 57.05 # max tolerated temperature for electron transport
-metabolic_opt_temp = 30 # metabolic temperature optimum (C)
-
-
 def CiFunc(ci_val):
 
 	global gs, et, lt, vcmax, vjmax, kc ,ko, gamma1, resp
@@ -156,21 +112,53 @@ def TleafFunc(tleaf_in):
 
 	return TleafFunc
 
+########################################################
+#-------------------- Main code -----------------------#
+########################################################
 
-##### Main code #####
+in_dir='/Users/linniahawkins/Documents/SPA/inputs/'  
+start=datetime(2012,7,1) 
+end=datetime(2012,7,31)
 
+met_data = readin_met(in_dir,start,end) 
+
+# set veg parameters
+la = 3.2
+nit = 2.1 # canopy layer specific nitrogen content (gN/m2 leaf area)
+kappac = 16.86
+kappaj = 45.37
+vcm = kappac * nit # calculate Vcmax/Jmax given current nitrogen (umolC.m-2.s-1)
+vjm = kappaj * nit 
+dimen = 0.002 # (m)
+
+# set miscelanious values
+tower_ht = 33 # (m)
+Rcon = 8.3144    # universal gas constant (J/K/mol)
+rn = 0.105 # respiration constant umol CO2/g N at 10 deg C
+Vc_kurtosis = 0.143 # kurtosis of Vcmax temp response
+Vj_kurtosis = 0.172 # Kurtosis of Jmax temp response
+kc_saturation = 310
+kc_half_sat_conc = 23.956
+ko_saturation = 155
+ko_half_sat_conc = 14.509
+co2comp_saturation = 36.5
+co2comp_half_sat_conc = 9.46
+vcmax_max_temp = 65.03 # max tolerated temperature for carboxylation
+jmax_max_temp = 57.05 # max tolerated temperature for electron transport
+metabolic_opt_temp = 30 # metabolic temperature optimum (C)
 
 
 GS=[]; LT=[]; CI=[]; ET=[]; AN=[];
 
-for i in range(len(met_temp)):
-	temp = met_temp[i]
-	par = met_par[i]
+for i in range(len(met_data)):
+
+	temp = met_data['airt'][i]
+	par = met_data['PAR'][i]
 	atmos_press =  98400 # Pa
 	netrad =  .08 # net radiation penetration to canopy layer (kW.m-2)
-	co2 = met_co2[i] # umol/mol
-	vpd = met_vpd[i] # kPa
-	wind_spd = met_wind_spd[i]  # m/s
+	co2 = met_data['co2'][i] # umol/mol
+	vpd = met_data['vpd'][i] # kPa
+	wind_spd = met_data['wind_spd'][i]  # m/s
 
 	# Calculate relative humidity (%) and water deficit (g/m3) from VPD (kPa) and temp (C)
 	if (vpd<0):
@@ -185,6 +173,7 @@ for i in range(len(met_temp)):
 
 
 	lt_out = optimize.brentq(TleafFunc, temp-20, temp+20)
+
 	an = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci)
 	GS.append(gs)
 	LT.append(lt)
