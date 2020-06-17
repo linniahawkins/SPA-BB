@@ -186,7 +186,7 @@ for i in range(len(met_data)):
 	# Outer temperature loop 
 	lt_out = optimize.brentq(TleafFunc, temp-20, temp+20)
 	
-	# Calculate final anet (umol/m2/s)
+	# Scale output data by leaf area
 	an = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci)
 	agr = an+resp
 
@@ -207,6 +207,10 @@ for i in range(len(met_data)):
 out_data = pd.DataFrame(out_data)
 out_data.index = pd.date_range(start,end,freq='30min')
 
+# Write output data
+out_file = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end)) + '.csv' 
+out_data.to_csv(out_file)
+
 ########################################################
 #---------------------- Plot --------------------------#
 ########################################################
@@ -217,30 +221,34 @@ ax1 = plt.subplot(3,1,1)
 ax1.plot(out_data['anet(umol/m2/s)'],label='Anet (umol/m2/s)')
 ax1.set_ylabel('(umol/m2/s)')
 ax2 = ax1.twinx()
-ax2.plot(out_data['et(kg/m2/s)']*86400,color='grey',label='ET (mm/day)')
+ax2.plot(out_data['et(kg/m2/s)']*86400,color='grey',alpha=0.8,label='ET (mm/day)')
 ax2.set_ylabel('(mm/day)')
-ax2.legend(loc='upper right')
-ax1.legend(loc='upper left')
+ax2.legend(loc='upper right',frameon=False)
+ax1.legend(loc='upper left',frameon=False)
 
 ax1 = plt.subplot(3,1,2)
 ax1.plot(out_data['ci(umol/mol)'],label='Ci (umol/mol)')
 ax1.plot(met_data['co2'],label='CO2(umol/mol)')
 ax1.set_ylabel('(umol/mol)')
+ax1.set_ylim([0,450])
 ax2 = ax1.twinx()
-ax2.plot(out_data['gs(umol/m2/s)'],color='grey',label='gs (umol/m2/s)')
+ax2.plot(out_data['gs(umol/m2/s)'],color='grey',alpha=0.8,label='gs (umol/m2/s)')
 ax2.set_ylabel('(umol/m2/s)')
-ax2.legend(loc='upper right')
-ax1.legend(loc='upper left')
+ax2.legend(loc='upper right',frameon=False)
+ax1.legend(loc='upper left',frameon=False)
 
 ax1 = plt.subplot(3,1,3)
 ax1.plot(out_data['tleaf(C)'],label='Tleaf (C)')
 ax1.plot(met_data['airt'], label='Tair (C)')
 ax1.set_ylabel('(C)')
 ax2 = ax1.twinx()
-ax2.plot(met_data['vpd'],color='grey',label='VPD (hPa)')
+ax2.plot(met_data['vpd'],color='grey',alpha=0.8,label='VPD (hPa)')
 ax2.set_ylabel('(hPa)')
-ax2.legend(loc='upper right')
-ax1.legend(loc='upper left')
+ax2.legend(loc='upper right',frameon=False)
+ax1.legend(loc='upper left',frameon=False)
 
-plt.show()
+
+out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
+plt.savefig(out_figure, dpi=300)
+#plt.show()
 
