@@ -54,15 +54,15 @@ def leaf_temperature( gs, netrad, temp, wdef, gbb):
     Returns		:	leaf temperature (C) """
 
     # set constants
-    cp_air = 1004
-    air_density_kg = 1.27
-    gbh = .03 
-    boltz_kW = 5.67*10**-11
+    cp_air = 1004 # Specific heat capacity of air; J.kg-1.K-1
+    air_density_kg = 353 / (temp + 273.15 )
+    gbh = .03  #! boundary layer conductance for heat for a given canopy layer (m.s-1)
+    boltz_kW = 5.67*10**-11 
     emiss = 0.959
 
-    ta = temp + 273.15
+    ta = temp + 273.15 # convert to K
     rho =  air_density_kg * 10**3 # density of air g/m3
-    cp = cp_air*10**-6
+    cp = cp_air*10**-6 # unit conversion
 
     # slope of saturation vapor pressure curve (t-dependent)
     s = 6.1078 * 17.269 * 237.3 * np.exp( 17.269*temp / (237.3+temp))
@@ -176,6 +176,28 @@ def tempmet( max_temp , opt , q , lt):
 	
 
 
+def boundary( temp, tower_ht, atmos_press, wind_spd, dimen ):
+	""" Calculate boundary layer conductances: layer height hard coded to 14m 
+	Parameters	temp 		:	atmospheric temperature (C)
+				tower_ht 	: 	tower height (m)
+				atmos_press : 	atmospheric pressure (Pa)
+				wind_spd	: wind speed (m/s)
+				dimen		: leaf characteristic dimension 
+	Returns 	boundary layer conductance to water vapor (m/s) and heat"""
+
+	layer_ht = 14
+	alpha  = 4
+
+	Dwv   = 0.0000242 * ( ( ( temp + 273.15 ) / 293.15 )**1.75 ) * 101300 / atmos_press
+	mult   = np.exp( alpha * ( layer_ht / tower_ht - 1 ) )
+	u = wind_spd * mult
+	thick  = 0.004 * ( dimen / u )**0.5
+	# conductance to water vapour (m s-1 - not mol m-2 s-1) i.e. remove P/RT
+	gbw = Dwv / thick
+	# approximate boundary layer conductance to heat
+	leaf_heat_conductance = gbw * 0.93
+
+	return gbw, leaf_heat_conductance
 
 
 
