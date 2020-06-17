@@ -7,8 +7,10 @@ from scipy import optimize
 from pyfunc import *
 from datetime import datetime
 import matplotlib.pyplot as plt
+from pandas.plotting import register_matplotlib_converters
 
-# Set atmospheric variables 
+###############################################################################
+
 def readin_met(in_dir,start,end):
 	filename = os.path.join(in_dir+'FLX_USMe2_2002-01-01_2014-12-31_30min.csv')
 	df = pd.read_csv(filename,header=0,index_col=0, parse_dates=True, squeeze=True)
@@ -17,6 +19,8 @@ def readin_met(in_dir,start,end):
 	met_data = df[start:end]
 
 	return met_data
+
+###############################################################################
 
 def CiFunc(ci_val):
 
@@ -43,8 +47,7 @@ def CiFunc(ci_val):
 		gsx = g0
 
 	# convert gs (mol/m2/s) to m/s
-	convert = (Rcon * ( 273.15 + temp )) / atmos_press
-	gs = gsx*convert
+	gs = gsx*(Rcon * ( 273.15 + temp )) / atmos_press
 
 	lt = leaf_temperature( gs, netrad, temp, wdef, gbb )
 
@@ -56,6 +59,7 @@ def CiFunc(ci_val):
 
 	return diff
 
+###############################################################################
 
 def empirical_stomata( tleaf ):
 	"""determine stable ci for given leaf temperature
@@ -75,11 +79,13 @@ def empirical_stomata( tleaf ):
 	gamma1 = arrhenious(co2comp_saturation,co2comp_half_sat_conc,lt)
 
 	# modify vcmax by Btran
+	# in progress
 
 	# calculate leaf respiration at leaf temperature (umol/m2/s)
 	resp = rn * nit * np.exp( np.log(2) * ( lt - 10 ) / 10 )
 
 	# calculate saturation vapor pressure and deficit at leaf temperature
+	# in progress
 
 	# Ci calculation
 	ci0 = 0.1*co2 # minimum plausible Ci
@@ -89,8 +95,11 @@ def empirical_stomata( tleaf ):
 	ci = optimize.brentq(CiFunc,ci0,ci1)
 
 	# calculate relative humidity and VPD at leaf surface given new gs
+	# in progress
 
 	return lt
+
+###############################################################################
 
 def TleafFunc(tleaf_in):
 	""" calculate leaf fluxes from input leaf temperature (tleaf_in) and 
@@ -99,13 +108,9 @@ def TleafFunc(tleaf_in):
 
 	global lt
 
-	delta = 1
-
 	tleaf_old = tleaf_in
 
-	empirical_stomata(tleaf_in)
-	#tleaf_old = lt
-	#empirical_stomata(tleaf_in)
+	empirical_stomata(tleaf_old)
 	tleaf_new = lt
 
 	TleafFunc = tleaf_new - tleaf_old
@@ -116,22 +121,26 @@ def TleafFunc(tleaf_in):
 #-------------------- Main code -----------------------#
 ########################################################
 
-in_dir='/Users/linniahawkins/Documents/SPA/inputs/'  
+# set data directory
+in_dir='/Users/linniahawkins/Documents/SPA/inputs/'
+
+# set simulations start:end dates
 start=datetime(2012,7,1) 
 end=datetime(2012,7,31)
 
+# readin met data
 met_data = readin_met(in_dir,start,end) 
 
 # set veg parameters
-la = 3.2
+la = 3.2 # leaf area index
 nit = 2.1 # canopy layer specific nitrogen content (gN/m2 leaf area)
 kappac = 16.86
 kappaj = 45.37
 vcm = kappac * nit # calculate Vcmax/Jmax given current nitrogen (umolC.m-2.s-1)
 vjm = kappaj * nit 
-dimen = 0.002 # (m)
+dimen = 0.002 # leaf characteristic dimension (m)
 
-# set miscelanious values
+# set miscelanious constants
 tower_ht = 33 # (m)
 Rcon = 8.3144    # universal gas constant (J/K/mol)
 rn = 0.105 # respiration constant umol CO2/g N at 10 deg C
@@ -148,10 +157,13 @@ jmax_max_temp = 57.05 # max tolerated temperature for electron transport
 metabolic_opt_temp = 30 # metabolic temperature optimum (C)
 
 
-GS=[]; LT=[]; CI=[]; ET=[]; AN=[];
+# initialize output data
+out_data = []
 
+# loop through timesteps
 for i in range(len(met_data)):
 
+	# set met data for time step
 	temp = met_data['airt'][i]
 	par = met_data['PAR'][i]
 	atmos_press =  98400 # Pa
@@ -171,29 +183,64 @@ for i in range(len(met_data)):
 	[gbb, leaf_heat_conductance] = boundary(temp,tower_ht, atmos_press, wind_spd, dimen )
 	gbv = gbb*atmos_press/(Rcon*(temp+273.15)) # boundary layer conductance to H2O (umol/m2/s)
 
-
+	# Outer temperature loop 
 	lt_out = optimize.brentq(TleafFunc, temp-20, temp+20)
-
+	
+	# Calculate final anet (umol/m2/s)
 	an = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci)
-	GS.append(gs)
-	LT.append(lt)
-	CI.append(ci)
-	ET.append(et/1000*86400) # mm/day
-	AN.append(an)
+	agr = an+resp
 
-############### plot ###################
-# scatter vars of interest
+	# store 
+	out_data.append(
+		{
+			'gs(umol/m2/s)'	:	gs,
+			'tleaf(C)'		:	lt,
+			'anet(umol/m2/s)':	an,
+			'agr(umol/m2/s)': 	agr,
+			'resp(umol/m2/s)': 	resp,
+			'ci(umol/mol)'	:	ci,
+			'et(kg/m2/s)'	:	et/1000,
+
+		})
+
+# convert out_data to dataframe
+out_data = pd.DataFrame(out_data)
+out_data.index = pd.date_range(start,end,freq='30min')
+
+########################################################
+#---------------------- Plot --------------------------#
+########################################################
 plt.figure(num=None, figsize=(12, 9), dpi=100, facecolor='w', edgecolor='k')
 plt.subplots_adjust(left=.05, bottom=.1, right=.9, top=.95, wspace=0.2, hspace=0.2)
-plt.subplot(2,1,1)
-plt.plot(AN,label='an')
-plt.plot(ET,label='et')
-plt.legend()
 
-plt.subplot(2,1,2)
-plt.plot(CI,label='ci')
-plt.plot(LT,label='lt')
-plt.legend()
+ax1 = plt.subplot(3,1,1)
+ax1.plot(out_data['anet(umol/m2/s)'],label='Anet (umol/m2/s)')
+ax1.set_ylabel('(umol/m2/s)')
+ax2 = ax1.twinx()
+ax2.plot(out_data['et(kg/m2/s)']*86400,color='grey',label='ET (mm/day)')
+ax2.set_ylabel('(mm/day)')
+ax2.legend(loc='upper right')
+ax1.legend(loc='upper left')
+
+ax1 = plt.subplot(3,1,2)
+ax1.plot(out_data['ci(umol/mol)'],label='Ci (umol/mol)')
+ax1.plot(met_data['co2'],label='CO2(umol/mol)')
+ax1.set_ylabel('(umol/mol)')
+ax2 = ax1.twinx()
+ax2.plot(out_data['gs(umol/m2/s)'],color='grey',label='gs (umol/m2/s)')
+ax2.set_ylabel('(umol/m2/s)')
+ax2.legend(loc='upper right')
+ax1.legend(loc='upper left')
+
+ax1 = plt.subplot(3,1,3)
+ax1.plot(out_data['tleaf(C)'],label='Tleaf (C)')
+ax1.plot(met_data['airt'], label='Tair (C)')
+ax1.set_ylabel('(C)')
+ax2 = ax1.twinx()
+ax2.plot(met_data['vpd'],color='grey',label='VPD (hPa)')
+ax2.set_ylabel('(hPa)')
+ax2.legend(loc='upper right')
+ax1.legend(loc='upper left')
 
 plt.show()
 

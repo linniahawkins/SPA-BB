@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import os
 
+###############################################################################
+
 def farquhar( vcmax, vjmax, kc, ko, gamma1, resp, par, ci ):
 	"""Calculate leaf internal co2 concentration (ci) from stomatal conductance (gs)
 	assuming a leaf temperature of 25C
@@ -42,6 +44,7 @@ def farquhar( vcmax, vjmax, kc, ko, gamma1, resp, par, ci ):
 
 	return farquhar
 
+###############################################################################
 
 def leaf_temperature( gs, netrad, temp, wdef, gbb):
     """ determines leaf temperature from stomatal conductance
@@ -83,6 +86,7 @@ def leaf_temperature( gs, netrad, temp, wdef, gbb):
 
     return leaf_temperature
 
+###############################################################################
 
 def evap( gs, lt, netrad, wdef, gbb ):
     """determine evapotranspiration rate (g m-2 s-1) 
@@ -104,6 +108,7 @@ def evap( gs, lt, netrad, wdef, gbb ):
 
     return evap
 
+###############################################################################
 
 def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 	"""diffusion limited assimilation rate (umol.C.m-2 ground area s-1)
@@ -127,6 +132,7 @@ def diffusion( gs, ci, et , gbb , lt, atmos_press, co2 ):
 
 	return diffusion
 
+###############################################################################
 
 def quadratic(a,b,c):
 	
@@ -144,10 +150,11 @@ def quadratic(a,b,c):
 
 	return [r1,r2]
 
+###############################################################################
 
 def arrhenious( a, b, lt):
 	""" Temperature adjustment for Michaelis-Menten coeefficients for CO2 (kc)
-	and 02 (k0) and co2 compensation point
+		and 02 (k0) and co2 compensation point
 			a  	: saturation
 			b 	: 	half saturation concentration
 			t 	: 	leaf temperature """
@@ -156,10 +163,11 @@ def arrhenious( a, b, lt):
 
 	return arrhenious
 
+###############################################################################
 
 def tempmet( max_temp , opt , q , lt):
 	"""Apply non-gaussian temperature modifications on carboxylation and 
-	electron-transport rates
+	   electron-transport rates
 		max_temp 	:	max temperature
 		opt 	 	: 	metabolic optimum temperature
 		q 			: 	kurtosis
@@ -174,7 +182,7 @@ def tempmet( max_temp , opt , q , lt):
 
 	return tempmet
 	
-
+###############################################################################
 
 def boundary( temp, tower_ht, atmos_press, wind_spd, dimen ):
 	""" Calculate boundary layer conductances: layer height hard coded to 14m 
@@ -199,13 +207,5 @@ def boundary( temp, tower_ht, atmos_press, wind_spd, dimen ):
 
 	return gbw, leaf_heat_conductance
 
-
-
-
-
-
-
-
-
-
+###############################################################################
 
