@@ -59,7 +59,7 @@ def leaf_temperature( gs, netrad, temp, wdef, gbb):
     # set constants
     cp_air = 1004 # Specific heat capacity of air; J.kg-1.K-1
     air_density_kg = 353 / (temp + 273.15 )
-    gbh = .03  #! boundary layer conductance for heat for a given canopy layer (m.s-1)
+    gbh = gbb*0.93  #! boundary layer conductance for heat for a given canopy layer (m.s-1)
     boltz_kW = 5.67*10**-11 
     emiss = 0.959
 
@@ -203,9 +203,8 @@ def boundary( temp, tower_ht, atmos_press, wind_spd, dimen ):
 	# conductance to water vapour (m s-1 - not mol m-2 s-1) i.e. remove P/RT
 	gbw = Dwv / thick
 	# approximate boundary layer conductance to heat
-	leaf_heat_conductance = gbw * 0.93
+	gbh = gbw * 0.93
 
-	return gbw, leaf_heat_conductance
+	return gbw, gbh
 
 ###############################################################################
-
