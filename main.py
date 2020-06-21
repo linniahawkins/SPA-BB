@@ -22,7 +22,7 @@ def readin_met(in_dir,start,end):
 
 ###############################################################################
 
-def CiFunc(ci_val):
+def CiFunc_BB(ci_val):
 
 	global gs, et, lt, vcmax, vjmax, kc ,ko, gamma1, resp
 
@@ -61,7 +61,7 @@ def CiFunc(ci_val):
 
 ###############################################################################
 
-def empirical_stomata( tleaf ):
+def empirical_stomata( tleaf, model ):
 	"""determine stable ci for given leaf temperature
 		tleaf	:	leaf temperature (C)"""
 
@@ -92,7 +92,10 @@ def empirical_stomata( tleaf ):
 	ci1 = 2*co2 # maximum plausible ci
 	tol = .1 # convergence tolerance for brentq solver
 
-	ci = optimize.brentq(CiFunc,ci0,ci1)
+	if (model ==0):
+		ci = optimize.brentq(CiFunc_BB,ci0,ci1)
+	else:
+		ci = optimize.brentq(CiFunc_Med,ci0,ci1)
 
 	# calculate relative humidity and VPD at leaf surface given new gs
 	# in progress
@@ -110,7 +113,7 @@ def TleafFunc(tleaf_in):
 
 	tleaf_old = tleaf_in
 
-	empirical_stomata(tleaf_old)
+	empirical_stomata(tleaf_old, model)
 	tleaf_new = lt
 
 	TleafFunc = tleaf_new - tleaf_old
@@ -126,7 +129,10 @@ in_dir='/Users/linniahawkins/Documents/SPA/inputs/'
 
 # set simulations start:end dates
 start=datetime(2012,7,1) 
-end=datetime(2012,7,31)
+end=datetime(2012,7,6)
+
+# set which model to run: 0=Ball-Berry 1=Medlyn
+model = 0
 
 # readin met data
 met_data = readin_met(in_dir,start,end) 
@@ -167,7 +173,7 @@ for i in range(len(met_data)):
 	temp = met_data['airt'][i]
 	par = met_data['PAR'][i]
 	atmos_press =  98400 # Pa
-	netrad =  .08 # net radiation penetration to canopy layer (kW.m-2)
+	netrad =  .0001*met_data['sw_rad'][i] # net radiation penetration to canopy layer (kW.m-2)
 	co2 = met_data['co2'][i] # umol/mol
 	vpd = met_data['vpd'][i] # kPa
 	wind_spd = met_data['wind_spd'][i]  # m/s
@@ -178,9 +184,11 @@ for i in range(len(met_data)):
 	wdef = vpd * 217 / (.1 * (temp + 273.4))  # air water content deficit (g m-3)
 	vpsat = 613.75*np.exp((17.502*temp) / (240.97+temp)) # (Pa)
 	vpair = vpsat - vpd*(10**3) # (Pa)
+	# constrain vpair
+	vpair = max(min(vpair,0.2*vpsat),vpsat)
 	rh = (vpair/vpsat)
 
-	[gbb, leaf_heat_conductance] = boundary(temp,tower_ht, atmos_press, wind_spd, dimen )
+	[gbb, gbh] = boundary(temp,tower_ht, atmos_press, wind_spd, dimen )
 	gbv = gbb*atmos_press/(Rcon*(temp+273.15)) # boundary layer conductance to H2O (umol/m2/s)
 
 	# Outer temperature loop 
@@ -209,7 +217,7 @@ out_data.index = pd.date_range(start,end,freq='30min')
 
 # Write output data
 out_file = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end)) + '.csv' 
-out_data.to_csv(out_file)
+#out_data.to_csv(out_file)
 
 ########################################################
 #---------------------- Plot --------------------------#
@@ -248,7 +256,7 @@ ax2.legend(loc='upper right',frameon=False)
 ax1.legend(loc='upper left',frameon=False)
 
 
-out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
-plt.savefig(out_figure, dpi=300)
-#plt.show()
+#out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
+#plt.savefig(out_figure, dpi=300)
+plt.show()
 
