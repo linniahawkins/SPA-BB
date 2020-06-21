@@ -22,7 +22,7 @@ def readin_met(in_dir,start,end):
 
 ###############################################################################
 
-def CiFunc_BB(ci_val):
+def CiFunc(ci_val):
 
 	global gs, et, lt, vcmax, vjmax, kc ,ko, gamma1, resp
 
@@ -33,18 +33,37 @@ def CiFunc_BB(ci_val):
 	#cs = co2 - (anx / gbc) # gbc boundary layer conductance to CO2
 	cs = co2
 
-	# Ball-Berry
-	g0 = 0.01
-	g1 = 9
+	if ( model == 0 ):
 
-	if (anx > 0 ):
-		aquad = cs
-		bquad = cs*(gbv-g0) - ( g1*anx )
-		cquad = -gbv * (cs*g0 + g1*anx*rh)
-		[r1,r2] = quadratic(aquad,bquad,cquad)
-		gsx = max(r1,r2)
-	else:
-		gsx = g0
+		# Ball-Berry
+		g0 = 0.01
+		g1 = 9
+
+		if (anx > 0 ):
+			aquad = cs
+			bquad = cs*(gbv-g0) - ( g1*anx )
+			cquad = -gbv * (cs*g0 + g1*anx*rh)
+			[r1,r2] = quadratic(aquad,bquad,cquad)
+			gsx = max(r1,r2)
+		else:
+			gsx = g0
+	elif ( model == 1 ):
+		
+		# Medlyn
+		vpd_min = 100
+		g0 = 0.01
+		g1 = 9
+
+		if (anx > 0):
+			vpd_term = max((vpd),vpd_min)*0.001 # convert units
+			term = 1.6 * anx / cs
+			aquad = 1
+			bquad = -(2 * (g0 + term) + (g1 * term)**2) / (gbv * vpd_term)
+			cquad = g0 * g0 + (2*g0 + term * (1-g1*g1 / vpd_term)) * term
+			[r1,r2] = quadratic(aquad,bquad,cquad)
+			gsx = max(r1,r2)
+		else:
+			gsx = g0
 
 	# convert gs (mol/m2/s) to m/s
 	gs = gsx*(Rcon * ( 273.15 + temp )) / atmos_press
@@ -78,8 +97,9 @@ def empirical_stomata( tleaf, model ):
 	ko     = arrhenious(ko_saturation,ko_half_sat_conc,lt)
 	gamma1 = arrhenious(co2comp_saturation,co2comp_half_sat_conc,lt)
 
-	# modify vcmax by Btran
-	# in progress
+	# modify vcmax and stomatal parameters by Btran
+	btran = 1
+	vcmax = vcmax * btran
 
 	# calculate leaf respiration at leaf temperature (umol/m2/s)
 	resp = rn * nit * np.exp( np.log(2) * ( lt - 10 ) / 10 )
@@ -92,10 +112,7 @@ def empirical_stomata( tleaf, model ):
 	ci1 = 2*co2 # maximum plausible ci
 	tol = .1 # convergence tolerance for brentq solver
 
-	if (model ==0):
-		ci = optimize.brentq(CiFunc_BB,ci0,ci1)
-	else:
-		ci = optimize.brentq(CiFunc_Med,ci0,ci1)
+	ci = optimize.brentq(CiFunc,ci0,ci1)
 
 	# calculate relative humidity and VPD at leaf surface given new gs
 	# in progress
@@ -132,7 +149,7 @@ start=datetime(2012,7,1)
 end=datetime(2012,7,6)
 
 # set which model to run: 0=Ball-Berry 1=Medlyn
-model = 0
+model = 1
 
 # readin met data
 met_data = readin_met(in_dir,start,end) 
