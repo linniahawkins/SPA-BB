@@ -50,15 +50,15 @@ def CiFunc(ci_val):
 	elif ( model == 1 ):
 		
 		# Medlyn
-		vpd_min = 100
+		vpd_min = 1 # (kPa)
 		g0 = 0.01
 		g1 = 9
 
 		if (anx > 0):
-			vpd_term = max((vpd),vpd_min)*0.001 # convert units
+			vpd_term = max(vpd,vpd_min) # units kPa
 			term = 1.6 * anx / cs
 			aquad = 1
-			bquad = -(2 * (g0 + term) + (g1 * term)**2) / (gbv * vpd_term)
+			bquad = -(2 * (g0 + term) + (g1 * term)**2 / (gbv * vpd_term))
 			cquad = g0 * g0 + (2*g0 + term * (1-g1*g1 / vpd_term)) * term
 			[r1,r2] = quadratic(aquad,bquad,cquad)
 			gsx = max(r1,r2)
@@ -146,7 +146,7 @@ in_dir='/Users/linniahawkins/Documents/SPA/inputs/'
 
 # set simulations start:end dates
 start=datetime(2012,7,1) 
-end=datetime(2012,7,6)
+end=datetime(2012,7,7)
 
 # set which model to run: 0=Ball-Berry 1=Medlyn
 model = 1
@@ -155,7 +155,7 @@ model = 1
 met_data = readin_met(in_dir,start,end) 
 
 # set veg parameters
-la = 3.2 # leaf area index
+LAI = 3.4 # leaf area index
 nit = 2.1 # canopy layer specific nitrogen content (gN/m2 leaf area)
 kappac = 16.86
 kappaj = 45.37
@@ -208,23 +208,35 @@ for i in range(len(met_data)):
 	[gbb, gbh] = boundary(temp,tower_ht, atmos_press, wind_spd, dimen )
 	gbv = gbb*atmos_press/(Rcon*(temp+273.15)) # boundary layer conductance to H2O (umol/m2/s)
 
-	# Outer temperature loop 
+
+	# Run Stomatal Optimization Model 
 	lt_out = optimize.brentq(TleafFunc, temp-20, temp+20)
 	
-	# Scale output data by leaf area
+
+	# prepare output data
 	an = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci)
 	agr = an+resp
+	gsm = 1000*gs* atmos_press / ( ( lt + 273.15 ) * Rcon ) # convert m/s to mmol/m2/s
+	et = et/1000 # convert from g/m2/s to kg/m2/s
+	
+	# for comparison with SPA-WUEi scale by leaf area: la = .16667 * 3.4 = 1/6 * LAI 
+	la = LAI/6
+	an_total = an * la
+	agr_total = agr * la
+	resp_total = resp * la
+	et_total = et * la 
+	gs_total = gsm * la
 
-	# store 
+	# store data for this time step
 	out_data.append(
 		{
-			'gs(umol/m2/s)'	:	gs,
+			'gs(mmol/m2/s)'	:	gs_total,
 			'tleaf(C)'		:	lt,
-			'anet(umol/m2/s)':	an,
-			'agr(umol/m2/s)': 	agr,
-			'resp(umol/m2/s)': 	resp,
+			'anet(umol/m2/s)':	an_total,
+			'agr(umol/m2/s)': 	agr_total,
+			'resp(umol/m2/s)': 	resp_total,
 			'ci(umol/mol)'	:	ci,
-			'et(kg/m2/s)'	:	et/1000,
+			'et(kg/m2/s)'	:	et_total,
 
 		})
 
@@ -233,7 +245,7 @@ out_data = pd.DataFrame(out_data)
 out_data.index = pd.date_range(start,end,freq='30min')
 
 # Write output data
-out_file = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end)) + '.csv' 
+#out_file = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_Med_python_1layer_' + str(datetime.date(start)) + '_' + str(datetime.date(end)) + '.csv' 
 #out_data.to_csv(out_file)
 
 ########################################################
@@ -257,8 +269,8 @@ ax1.plot(met_data['co2'],label='CO2(umol/mol)')
 ax1.set_ylabel('(umol/mol)')
 ax1.set_ylim([0,450])
 ax2 = ax1.twinx()
-ax2.plot(out_data['gs(umol/m2/s)'],color='grey',alpha=0.8,label='gs (umol/m2/s)')
-ax2.set_ylabel('(umol/m2/s)')
+ax2.plot(out_data['gs(mmol/m2/s)'],color='grey',alpha=0.8,label='gs (mmol/m2/s)')
+ax2.set_ylabel('(mmol/m2/s)')
 ax2.legend(loc='upper right',frameon=False)
 ax1.legend(loc='upper left',frameon=False)
 
@@ -273,7 +285,7 @@ ax2.legend(loc='upper right',frameon=False)
 ax1.legend(loc='upper left',frameon=False)
 
 
-#out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_BB_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
-#plt.savefig(out_figure, dpi=300)
+out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_MED_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
+plt.savefig(out_figure, dpi=300)
 plt.show()
 
