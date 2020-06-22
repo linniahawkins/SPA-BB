@@ -52,7 +52,7 @@ def CiFunc(ci_val):
 		# Medlyn
 		vpd_min = 1 # (kPa)
 		g0 = 0.01
-		g1 = 9
+		g1 = 2.8
 
 		if (anx > 0):
 			vpd_term = max(vpd,vpd_min) # units kPa
