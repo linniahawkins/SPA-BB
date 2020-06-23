@@ -47,6 +47,7 @@ def CiFunc(ci_val):
 			gsx = max(r1,r2)
 		else:
 			gsx = g0
+
 	elif ( model == 1 ):
 		
 		# Medlyn
@@ -71,6 +72,7 @@ def CiFunc(ci_val):
 	lt = leaf_temperature( gs, netrad, temp, wdef, gbb )
 
 	et = evap( gs, lt, netrad, wdef, gbb )
+	et = max(0,et) / 18 # congert grams/m2/s to mol/m2/s
 
 	adx = diffusion( gs, ci_val, et , gbb , lt, atmos_press, co2)
 
@@ -146,7 +148,7 @@ in_dir='/Users/linniahawkins/Documents/SPA/inputs/'
 
 # set simulations start:end dates
 start=datetime(2012,7,1) 
-end=datetime(2012,7,7)
+end=datetime(2012,7,31)
 
 # set which model to run: 0=Ball-Berry 1=Medlyn
 model = 1
@@ -202,12 +204,11 @@ for i in range(len(met_data)):
 	vpsat = 613.75*np.exp((17.502*temp) / (240.97+temp)) # (Pa)
 	vpair = vpsat - vpd*(10**3) # (Pa)
 	# constrain vpair
-	vpair = max(min(vpair,0.2*vpsat),vpsat)
+	vpair = min(max(vpair,0.05*vpsat),vpsat)
 	rh = (vpair/vpsat)
 
 	[gbb, gbh] = boundary(temp,tower_ht, atmos_press, wind_spd, dimen )
 	gbv = gbb*atmos_press/(Rcon*(temp+273.15)) # boundary layer conductance to H2O (umol/m2/s)
-
 
 	# Run Stomatal Optimization Model 
 	lt_out = optimize.brentq(TleafFunc, temp-20, temp+20)
@@ -217,7 +218,7 @@ for i in range(len(met_data)):
 	an = farquhar ( vcmax, vjmax, kc, ko, gamma1, resp, par, ci)
 	agr = an+resp
 	gsm = 1000*gs* atmos_press / ( ( lt + 273.15 ) * Rcon ) # convert m/s to mmol/m2/s
-	et = et/1000 # convert from g/m2/s to kg/m2/s
+	et = 18*et/1000 # convert from mol/m2/s to kg/m2/s
 	
 	# for comparison with SPA-WUEi scale by leaf area: la = .16667 * 3.4 = 1/6 * LAI 
 	la = LAI/6
@@ -245,8 +246,8 @@ out_data = pd.DataFrame(out_data)
 out_data.index = pd.date_range(start,end,freq='30min')
 
 # Write output data
-#out_file = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_Med_python_1layer_' + str(datetime.date(start)) + '_' + str(datetime.date(end)) + '.csv' 
-#out_data.to_csv(out_file)
+out_file = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_Med_python_1layer_' + str(datetime.date(start)) + '_' + str(datetime.date(end)) + '.csv' 
+out_data.to_csv(out_file)
 
 ########################################################
 #---------------------- Plot --------------------------#
@@ -285,7 +286,7 @@ ax2.legend(loc='upper right',frameon=False)
 ax1.legend(loc='upper left',frameon=False)
 
 
-out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_MED_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
-plt.savefig(out_figure, dpi=300)
+#out_figure = '/Users/linniahawkins/Documents/SPA/spa-bb/python_bb/SPA_Med_python_' + str(datetime.date(start)) + '_' + str(datetime.date(end))
+#plt.savefig(out_figure, dpi=300)
 plt.show()
 
