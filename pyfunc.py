@@ -16,11 +16,11 @@ def farquhar( vcmax, vjmax, kc, ko, gamma1, resp, par, ci ):
     			 kc      : Michaelis-Menten constants for CO2
     			 ko      : and oxygen
     			 par     : PAR
-    			 resp    : respiration
+    			 resp    : respiration (mol CO2/m2 leaf/s)
     			 gamma1  : CO2 compensation point
     			 ci      : internal co2 concentration (umol/mol)
                  
-    Returns    : anx     : metabolic net photosynthetic rate (umolC/m2 ground area /s)"""
+    Returns    : anx     : metabolic net photosynthetic rate (umolC02/m2 ground area /s)"""
 
 	oi = 210 # o2 partial pressure umol/mol
 	alphaj = 0.385 # initial slope of quantum response curve
